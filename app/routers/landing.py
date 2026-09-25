@@ -146,7 +146,8 @@ async def landing_page(
     if campaign.notifications_enabled and campaign.notification_email:
         _trigger_notification(campaign, event, ua_parsed, background_tasks)
 
-    html = _render_landing_html(token, campaign.name, target.name)
+    redirect_url = getattr(campaign, "redirect_url", "") or ""
+    html = _render_landing_html(token, campaign.name, target.name, redirect_url)
     return HTMLResponse(content=html)
 
 
@@ -236,9 +237,21 @@ def _trigger_notification(campaign, event, ua_parsed, background_tasks):
 
 
 # ── Render Landing HTML ───────────────────────────────────────────────
-def _render_landing_html(token: str, campaign_name: str, target_name: str) -> str:
+def _render_landing_html(token: str, campaign_name: str, target_name: str, redirect_url: str = "") -> str:
     """Generate the security awareness training HTML page."""
     greeting = f'Hello <strong>{target_name}</strong>! ' if target_name else ''
+    redirect_html = ""
+    if redirect_url:
+        redirect_html = f"""
+            <div class="redirect-section" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.35);border-radius:12px;padding:20px;margin-top:20px;text-align:center;">
+                <h3 style="color:#60a5fa;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🎯 Training Resource Destination</h3>
+                <p style="color:#94a3b8;font-size:13px;margin-bottom:14px;">This simulation drill redirects to the following educational training resource:</p>
+                <a href="{redirect_url}" class="btn btn-primary" id="btn-redirect" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-flex;">
+                    ▶️ Continue to Training Video / Resource
+                </a>
+            </div>
+        """
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -279,15 +292,15 @@ def _render_landing_html(token: str, campaign_name: str, target_name: str) -> st
 <body>
     <div class="container">
         <div class="card">
-            <div class="icon-warning">\u26a0\ufe0f</div>
+            <div class="icon-warning">⚠️</div>
             <h1>This Was a Simulated Phishing Test</h1>
             <p class="subtitle">
                 {greeting}You clicked a link from a <strong>security awareness training campaign</strong>.
-                This is NOT a real attack \u2014 it's an authorized exercise to help improve security awareness.
+                This is NOT a real attack — it's an authorized exercise to help improve security awareness.
             </p>
 
             <div class="notice-box">
-                \U0001f6c8 <strong>Authorized Security Exercise</strong><br>
+                ℹ️ <strong>Authorized Security Exercise</strong><br>
                 This is an authorized security-awareness simulation conducted by your organization.
                 No passwords, credentials, cookies, or sensitive data are collected.
                 Only non-sensitive training telemetry (event type, browser family, timestamp)
@@ -295,10 +308,10 @@ def _render_landing_html(token: str, campaign_name: str, target_name: str) -> st
             </div>
 
             <div class="info-box">
-                <h3>\U0001f6e1\ufe0f What You Should Learn</h3>
+                <h3>🛡️ What You Should Learn</h3>
                 <ul>
                     <li>Always verify the sender before clicking links in emails or messages</li>
-                    <li>Check the URL carefully \u2014 look for misspellings and suspicious domains</li>
+                    <li>Check the URL carefully — look for misspellings and suspicious domains</li>
                     <li>Never enter credentials on pages reached through unexpected links</li>
                     <li>Hover over links to preview the actual destination URL</li>
                     <li>Report suspicious emails to your IT/security team immediately</li>
@@ -306,19 +319,15 @@ def _render_landing_html(token: str, campaign_name: str, target_name: str) -> st
                 </ul>
             </div>
 
+            {redirect_html}
+
             <div class="consent-section">
-                <h3>\U0001f4cb Training Data Collection (Optional)</h3>
+                <h3>📋 Complete Training Verification</h3>
                 <p>
-                    This security-awareness exercise can <strong>optionally</strong> use your
-                    browser's location permission. Your location will only be processed if you
-                    <strong>explicitly grant browser permission</strong>. You can decline without
-                    any consequences. No passwords, cookies, or keystrokes are collected.
+                    Confirm that you reviewed the security drill guidelines above to complete your training record.
                 </p>
-                <button class="btn btn-primary" onclick="submitConsent(true)">
-                    \u2705 I Consent \u2014 Share Training Data
-                </button>
-                <button class="btn btn-secondary" onclick="submitConsent(false)">
-                    \u274c No Thanks \u2014 Skip
+                <button class="btn btn-primary" onclick="submitConsent(false)">
+                    ✅ I Acknowledge & Complete Drill
                 </button>
                 <div id="result" class="result-box">
                     <p id="result-text"></p>
@@ -326,12 +335,13 @@ def _render_landing_html(token: str, campaign_name: str, target_name: str) -> st
             </div>
         </div>
         <p class="footer">
-            PhishGuard Security Awareness Platform \u00b7 Campaign: {campaign_name}
+            PhishGuard Security Awareness Platform · Campaign: {campaign_name}
         </p>
     </div>
 
     <script>
         const TOKEN = "{token}";
+        const REDIRECT_URL = "{redirect_url}";
 
         function getBrowserInfo() {{
             return {{
@@ -347,24 +357,10 @@ def _render_landing_html(token: str, campaign_name: str, target_name: str) -> st
 
         async function submitConsent(withLocation) {{
             const payload = {{
-                event_type: withLocation ? "location_consent" : "submit",
+                event_type: "submit",
                 location_consent: false,
                 browser_info: getBrowserInfo(),
             }};
-
-            if (withLocation && "geolocation" in navigator) {{
-                try {{
-                    const pos = await new Promise((resolve, reject) =>
-                        navigator.geolocation.getCurrentPosition(resolve, reject, {{ timeout: 10000 }})
-                    );
-                    payload.location_lat = pos.coords.latitude;
-                    payload.location_lng = pos.coords.longitude;
-                    payload.location_consent = true;
-                }} catch (err) {{
-                    payload.event_type = "location_denied";
-                    console.log("Location denied or unavailable:", err.message);
-                }}
-            }}
 
             try {{
                 const resp = await fetch("/t/" + TOKEN + "/event", {{
@@ -376,15 +372,17 @@ def _render_landing_html(token: str, campaign_name: str, target_name: str) -> st
                 const box = document.getElementById("result");
                 const text = document.getElementById("result-text");
                 box.classList.add("visible");
-                if (payload.location_consent) {{
-                    text.innerHTML = "\u2705 Thank you! Your training data (including authorized location) has been recorded.<br><small>Session: " + (data.session_id || "") + "</small>";
-                }} else {{
-                    text.innerHTML = "\u2705 Thank you for participating in this security awareness exercise! Stay vigilant against real phishing attempts.<br><small>Session: " + (data.session_id || "") + "</small>";
+                text.innerHTML = "✅ Training completed and verified! Thank you for staying vigilant against phishing.<br><small>Session ID: " + (data.session_id || "") + "</small>";
+
+                if (REDIRECT_URL) {{
+                    text.innerHTML += "<br><span style='color:#60a5fa'>Redirecting to training resource in 2 seconds...</span>";
+                    setTimeout(() => {{
+                        window.location.href = REDIRECT_URL;
+                    }}, 2000);
                 }}
             }} catch (err) {{
                 console.error("Submit error:", err);
             }}
-        }}
     </script>
 </body>
 </html>"""

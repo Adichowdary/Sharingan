@@ -8,16 +8,23 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_optional_user
 from app.config import settings
 from app.database import get_db
-from app.models import AuditLog, Campaign, CampaignTarget, User
+from app.models import AuditLog, Campaign, CampaignTarget, Event, User
 from app.services.qr_generator import generate_qr_code, generate_qr_bytes
 
 router = APIRouter(prefix="/api/campaigns", tags=["Campaigns"])
 
 
 # ── Schemas ───────────────────────────────────────────────────────────
+class QuickDrillCreate(BaseModel):
+    notification_email: str
+    redirect_url: str = ""
+    name: str = ""
+    authorized_simulation: bool = True
+
+
 class CampaignCreate(BaseModel):
     name: str
     description: str = ""
@@ -27,6 +34,7 @@ class CampaignCreate(BaseModel):
     notification_frequency: str = "immediate"  # immediate, every_5_min, daily
     notifications_enabled: bool = False
     authorized_simulation: bool = False
+    redirect_url: str = ""
 
 
 class TargetCreate(BaseModel):
@@ -132,6 +140,130 @@ def create_campaign(
         "created_at": str(campaign.created_at),
         "expires_at": str(campaign.expires_at),
         "notifications_enabled": campaign.notifications_enabled,
+    }
+
+
+# ── 1-Click Quick Drill Generator ─────────────────────────────────────
+@router.post("/quick", status_code=status.HTTP_201_CREATED)
+def create_quick_drill(
+    body: QuickDrillCreate,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(get_optional_user),
+):
+    """1-Click Quick Simulation Drill Generator with instant link & QR."""
+    if not body.notification_email or "@" not in body.notification_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A valid notification email address is required.",
+        )
+    if not body.authorized_simulation:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You must confirm this is an authorized security-awareness simulation.",
+        )
+
+    # Use authenticated user or fallback to first user or create default admin
+    if not user:
+        user = db.query(User).first()
+        if not user:
+            from app.auth import hash_password
+            user = User(username="admin", password_hash=hash_password("AdminPassword123!"))
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+    now_str = datetime.now(timezone.utc).strftime("%b %d, %H:%M")
+    name = body.name.strip() if body.name.strip() else f"Quick Awareness Drill ({now_str})"
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+
+    campaign = Campaign(
+        name=name,
+        description="Quick single-page security awareness simulation drill",
+        campaign_type="quick_drill",
+        expires_at=expires_at,
+        user_id=user.id,
+        notification_email=body.notification_email.strip(),
+        notification_frequency="immediate",
+        notifications_enabled=True,
+        authorized_simulation=True,
+        redirect_url=body.redirect_url.strip(),
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    # Create primary target link
+    target = CampaignTarget(
+        campaign_id=campaign.id,
+        name="Participant",
+        email="",
+    )
+    db.add(target)
+    db.commit()
+    db.refresh(target)
+
+    sim_url = f"{settings.BASE_URL}/t/{target.token}"
+    qr_data = generate_qr_code(sim_url)
+
+    db.add(AuditLog(
+        user_id=user.id,
+        action="quick_drill_created",
+        details=f"Quick drill #{campaign.id} generated for {campaign.notification_email}",
+    ))
+    db.commit()
+
+    return {
+        "id": campaign.id,
+        "name": campaign.name,
+        "token": target.token,
+        "simulation_url": sim_url,
+        "qr_code": qr_data,
+        "notification_email": campaign.notification_email,
+        "redirect_url": campaign.redirect_url,
+        "created_at": str(campaign.created_at),
+    }
+
+
+@router.get("/{campaign_id}/quick-stats")
+def get_quick_stats(
+    campaign_id: int,
+    db: Session = Depends(get_db),
+):
+    """Retrieve lightweight telemetry stats for the quick drill widget."""
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    events = (
+        db.query(Event)
+        .filter(Event.campaign_id == campaign_id)
+        .order_by(Event.timestamp.desc())
+        .limit(20)
+        .all()
+    )
+
+    clicks = [e for e in events if e.event_type == "click"]
+    submits = [e for e in events if e.event_type in ("submit", "training_completed")]
+
+    return {
+        "id": campaign.id,
+        "name": campaign.name,
+        "status": campaign.status,
+        "notification_email": campaign.notification_email,
+        "redirect_url": campaign.redirect_url,
+        "total_clicks": len(clicks),
+        "total_completions": len(submits),
+        "recent_events": [
+            {
+                "event_type": e.event_type,
+                "browser": e.browser_family or "Unknown",
+                "os": e.os_family or "Unknown",
+                "device": e.device_category or "Desktop",
+                "session_id": e.session_id,
+                "timestamp": str(e.timestamp),
+            }
+            for e in events
+        ],
     }
 
 

@@ -3,455 +3,652 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhishGuard — Security Awareness Platform</title>
-    <meta name="description" content="Phishing Simulation & Security Analysis Dashboard">
+    <title>PhishGuard — 1-Click Simulation Generator</title>
+    <meta name="description" content="Simple, fast phishing simulation drill and security awareness generator.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        .simple-container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+            position: relative;
+            z-index: 10;
+        }
+        .header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 36px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .brand-icon {
+            font-size: 32px;
+            filter: drop-shadow(0 0 12px rgba(124, 58, 237, 0.4));
+        }
+        .brand-title {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .brand-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse 2s infinite;
+        }
+        .hero-section {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .hero-title {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 30%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            max-width: 580px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        .generator-card {
+            background: rgba(15, 15, 38, 0.7);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            margin-bottom: 30px;
+        }
+        .form-row {
+            margin-bottom: 22px;
+        }
+        .field-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .field-label span {
+            color: var(--accent-purple-light);
+            font-weight: 400;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+        .field-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .input-stylish {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .input-stylish:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .auth-check {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(124, 58, 237, 0.08);
+            border: 1px solid rgba(124, 58, 237, 0.2);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 24px;
+            cursor: pointer;
+        }
+        .auth-check input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-purple);
+            cursor: pointer;
+        }
+        .auth-check-text {
+            font-size: 13px;
+            color: #cbd5e1;
+            user-select: none;
+        }
+        .btn-generate {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(124, 58, 237, 0.5);
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        }
+        .btn-generate:active {
+            transform: translateY(0);
+        }
+
+        /* ── Result Card ── */
+        .result-panel {
+            display: none;
+            background: rgba(15, 15, 38, 0.7);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            margin-bottom: 30px;
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .result-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #34d399;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .link-display-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        .link-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #38bdf8;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+        .btn-copy {
+            padding: 0 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-copy:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .qr-and-metrics {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 24px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .qr-box {
+            text-align: center;
+        }
+        .qr-image {
+            width: 140px;
+            height: 140px;
+            border-radius: 12px;
+            background: #fff;
+            padding: 6px;
+            margin: 0 auto 10px;
+            display: block;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+        .metric-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px 18px;
+        }
+        .metric-num {
+            font-size: 26px;
+            font-weight: 800;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .metric-name {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .feed-container {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .feed-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .feed-list {
+            list-style: none;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .feed-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 12px;
+        }
+        .feed-item:last-child {
+            border-bottom: none;
+        }
+        .feed-badge {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        .feed-badge.click {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+        .feed-badge.submit {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .toast-notify {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--accent-purple);
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            font-size: 13px;
+            display: none;
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+        @media (max-width: 680px) {
+            .qr-and-metrics {
+                grid-template-columns: 1fr;
+            }
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<!-- ═══ Toast Container ═══ -->
-<div id="toast-container" class="toast-container"></div>
+    <!-- Notification Toast -->
+    <div id="simple-toast" class="toast-notify"></div>
 
-<!-- ═══ LOGIN SCREEN ═══ -->
-<div id="login-screen" class="login-screen">
-    <div class="login-card">
-        <div class="login-logo">🛡️</div>
-        <h1 class="login-title">PhishGuard</h1>
-        <p class="login-subtitle">Security Awareness Platform</p>
-        <form onsubmit="handleLogin(event)">
-            <div class="form-group">
-                <label class="form-label">Username</label>
-                <input type="text" id="login-username" class="form-input" placeholder="Enter username" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" id="login-password" class="form-input" placeholder="Enter password" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Sign In</button>
-            <p id="login-error" class="login-error"></p>
-        </form>
-    </div>
-</div>
-
-<!-- ═══ APP LAYOUT ═══ -->
-<div id="app-layout" class="app-layout" style="display:none">
-
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a class="sidebar-logo" onclick="navigate('dashboard')">
-                <div class="logo-icon">🛡️</div>
+    <div class="simple-container">
+        <!-- Header -->
+        <header class="header-bar">
+            <div class="brand">
+                <div class="brand-icon">🛡️</div>
                 <div>
-                    <div class="logo-text">PhishGuard</div>
-                    <div class="logo-version">v2.0</div>
+                    <div class="brand-title">PhishGuard</div>
+                    <div class="brand-desc">Quick Simulation & Awareness Platform</div>
                 </div>
-            </a>
-        </div>
-        <nav class="sidebar-nav">
-            <div class="nav-section">
-                <div class="nav-section-title">Overview</div>
-                <a class="nav-item active" data-nav="dashboard" onclick="navigate('dashboard')">
-                    <span class="nav-icon">📊</span> Dashboard
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="status-badge">
+                    <div class="status-dot"></div>
+                    System Ready
+                </div>
+                <a href="/docs" target="_blank" style="color:var(--text-secondary); text-decoration:none; font-size:12px; padding:6px 12px; border:1px solid var(--border); border-radius:8px;">
+                    📚 API Docs
                 </a>
             </div>
-            <div class="nav-section">
-                <div class="nav-section-title">Campaigns</div>
-                <a class="nav-item" data-nav="campaigns" onclick="navigate('campaigns')">
-                    <span class="nav-icon">🎯</span> Campaigns
-                </a>
-            </div>
-            <div class="nav-section">
-                <div class="nav-section-title">Security</div>
-                <a class="nav-item" data-nav="url-analyzer" onclick="navigate('url-analyzer')">
-                    <span class="nav-icon">🔍</span> URL Analyzer
-                </a>
-                <a class="nav-item" data-nav="scan-history" onclick="navigate('scan-history')">
-                    <span class="nav-icon">📋</span> Scan History
-                </a>
-            </div>
-            <div class="nav-section">
-                <div class="nav-section-title">Notifications</div>
-                <a class="nav-item" data-nav="email-settings" onclick="navigate('email-settings')">
-                    <span class="nav-icon">✉️</span> Email Settings
-                </a>
-                <a class="nav-item" data-nav="notification-logs" onclick="navigate('notification-logs')">
-                    <span class="nav-icon">🔔</span> Notification Logs
-                </a>
-            </div>
-            <div class="nav-section">
-                <div class="nav-section-title">System</div>
-                <a class="nav-item" data-nav="audit-logs" onclick="navigate('audit-logs')">
-                    <span class="nav-icon">🧾</span> Audit Logs
-                </a>
-            </div>
-        </nav>
-        <div class="sidebar-footer">
-            <div class="user-badge">
-                <div class="user-avatar" id="user-avatar-letter">A</div>
-                <div class="user-info">
-                    <div class="user-name" id="display-username">admin</div>
-                    <div class="user-role">Administrator</div>
-                </div>
-                <button class="btn-logout" onclick="logout()" title="Logout">🚪</button>
-            </div>
-        </div>
-    </aside>
+        </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
+        <!-- Hero -->
+        <section class="hero-section">
+            <h1 class="hero-title">1-Click Phishing Drill Generator</h1>
+            <p class="hero-subtitle">
+                Enter your notification email and any educational destination (e.g. YouTube cybersecurity video). Get an instant simulation link and monitor live participant drill telemetry.
+            </p>
+        </section>
 
-        <!-- ═══ DASHBOARD ═══ -->
-        <div id="section-dashboard" class="section active">
-            <div class="page-header">
-                <h1 class="page-title">Dashboard</h1>
-                <p class="page-subtitle">Security awareness campaign overview</p>
-            </div>
-            <div class="stats-grid">
-                <div class="stat-card purple">
-                    <div class="stat-icon">🎯</div>
-                    <div class="stat-value" id="stat-campaigns">0</div>
-                    <div class="stat-label">Total Campaigns</div>
-                </div>
-                <div class="stat-card cyan">
-                    <div class="stat-icon">▶️</div>
-                    <div class="stat-value" id="stat-active">0</div>
-                    <div class="stat-label">Active Campaigns</div>
-                </div>
-                <div class="stat-card green">
-                    <div class="stat-icon">👥</div>
-                    <div class="stat-value" id="stat-targets">0</div>
-                    <div class="stat-label">Total Targets</div>
-                </div>
-                <div class="stat-card amber">
-                    <div class="stat-icon">🖱️</div>
-                    <div class="stat-value" id="stat-clicked">0</div>
-                    <div class="stat-label">Links Opened</div>
-                </div>
-                <div class="stat-card purple">
-                    <div class="stat-icon">📝</div>
-                    <div class="stat-value" id="stat-submitted">0</div>
-                    <div class="stat-label">Training Completed</div>
-                </div>
-                <div class="stat-card cyan">
-                    <div class="stat-icon">📈</div>
-                    <div class="stat-value" id="stat-click-rate">0%</div>
-                    <div class="stat-label">Click Rate</div>
-                </div>
-                <div class="stat-card green">
-                    <div class="stat-icon">🔍</div>
-                    <div class="stat-value" id="stat-url-scans">0</div>
-                    <div class="stat-label">URL Scans</div>
-                </div>
-                <div class="stat-card amber">
-                    <div class="stat-icon">📡</div>
-                    <div class="stat-value" id="stat-events">0</div>
-                    <div class="stat-label">Total Events</div>
-                </div>
-            </div>
-
-            <!-- Real-time Event Feed -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">
-                        <span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;margin-right:6px;animation:pulse 2s infinite"></span>
-                        Live Event Feed
-                    </span>
-                    <span class="badge badge-active" id="sse-status">Connecting…</span>
-                </div>
-                <div id="live-feed" style="max-height:360px;overflow-y:auto">
-                    <div class="empty-state" style="padding:30px" id="live-feed-empty">
-                        <p>Waiting for campaign events…</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══ CAMPAIGNS ═══ -->
-        <div id="section-campaigns" class="section">
-            <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
-                <div>
-                    <h1 class="page-title">Campaigns</h1>
-                    <p class="page-subtitle">Manage security awareness training campaigns</p>
-                </div>
-                <button class="btn btn-primary" onclick="openModal('campaign-modal')">+ New Campaign</button>
-            </div>
-            <div class="card">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr><th>Name</th><th>Status</th><th>Targets</th><th>Clicked</th><th>Rate</th><th>Email</th><th>Created</th><th>Actions</th></tr>
-                        </thead>
-                        <tbody id="campaigns-table-body">
-                            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══ URL ANALYZER ═══ -->
-        <div id="section-url-analyzer" class="section">
-            <div class="page-header">
-                <h1 class="page-title">URL Security Analyzer</h1>
-                <p class="page-subtitle">Analyze URLs for phishing indicators and security posture</p>
-            </div>
-            <div class="card" style="margin-bottom:20px">
-                <form onsubmit="analyzeURL(event)">
-                    <div class="form-group">
-                        <label class="form-label">Enter URL to Analyze</label>
-                        <div style="display:flex;gap:12px">
-                            <input type="text" id="url-input" class="form-input" placeholder="https://example.com" required style="flex:1">
-                            <button type="submit" class="btn btn-primary">🔍 Analyze</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div id="url-results"></div>
-        </div>
-
-        <!-- ═══ SCAN HISTORY ═══ -->
-        <div id="section-scan-history" class="section">
-            <div class="page-header">
-                <h1 class="page-title">Scan History</h1>
-                <p class="page-subtitle">Previous URL security scan results</p>
-            </div>
-            <div class="card">
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>URL</th><th>Risk Level</th><th>Score</th><th>Date</th></tr></thead>
-                        <tbody id="scan-history-body"><tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══ EMAIL SETTINGS ═══ -->
-        <div id="section-email-settings" class="section">
-            <div class="page-header">
-                <h1 class="page-title">Email Settings</h1>
-                <p class="page-subtitle">Configure SMTP for campaign notifications</p>
-            </div>
-            <div class="grid-2">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">✉️ SMTP Configuration</span></div>
-                    <form onsubmit="saveEmailConfig(event)">
-                        <div class="form-group">
-                            <label class="form-label">SMTP Provider</label>
-                            <select id="smtp-provider" class="form-select" onchange="onProviderChange()">
-                                <option value="gmail">Gmail</option>
-                                <option value="outlook">Outlook</option>
-                                <option value="yahoo">Yahoo</option>
-                                <option value="custom">Custom SMTP</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">SMTP Host</label>
-                                <input type="text" id="smtp-host" class="form-input" placeholder="smtp.gmail.com">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">SMTP Port</label>
-                                <input type="number" id="smtp-port" class="form-input" value="587">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">SMTP Username</label>
-                            <input type="text" id="smtp-username" class="form-input" placeholder="your-email@gmail.com">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">SMTP Password / App Password</label>
-                            <input type="password" id="smtp-password" class="form-input" placeholder="Enter password (leave blank to keep current)">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Sender Email</label>
-                            <input type="text" id="sender-email" class="form-input" placeholder="noreply@example.com">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Sender Display Name</label>
-                            <input type="text" id="sender-name" class="form-input" value="PhishGuard">
-                        </div>
-                        <div style="display:flex;gap:12px;margin-top:16px">
-                            <button type="submit" class="btn btn-primary">💾 Save Configuration</button>
-                            <button type="button" class="btn btn-secondary" onclick="sendTestEmail()">📧 Send Test Email</button>
-                        </div>
-                    </form>
-                </div>
-                <div class="card">
-                    <div class="card-header"><span class="card-title">🔔 Notification Triggers</span></div>
-                    <div style="margin-bottom:20px">
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer">
-                            <input type="checkbox" id="notify-click" checked> <span>Link opened</span>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer">
-                            <input type="checkbox" id="notify-submit" checked> <span>Training completed</span>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer">
-                            <input type="checkbox" id="notify-location"> <span>Location permission event</span>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px 0;cursor:pointer">
-                            <input type="checkbox" id="notify-daily"> <span>Daily summary</span>
-                        </label>
-                    </div>
-                    <div class="card" style="background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.2)">
-                        <p style="font-size:13px;color:var(--text-secondary);line-height:1.6">
-                            <strong style="color:var(--accent-purple-light)">🔒 Security Note</strong><br>
-                            SMTP credentials are stored server-side only.
-                            Never exposed in frontend code. For production use, prefer
-                            app-specific passwords or a transactional email API.
-                        </p>
-                    </div>
-                    <div id="email-config-status" style="margin-top:16px"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══ NOTIFICATION LOGS ═══ -->
-        <div id="section-notification-logs" class="section">
-            <div class="page-header">
-                <h1 class="page-title">Notification Logs</h1>
-                <p class="page-subtitle">Email notification delivery history</p>
-            </div>
-            <div class="stats-grid" style="margin-bottom:20px">
-                <div class="stat-card green">
-                    <div class="stat-icon">📧</div>
-                    <div class="stat-value" id="notif-total">0</div>
-                    <div class="stat-label">Total Sent</div>
-                </div>
-                <div class="stat-card cyan">
-                    <div class="stat-icon">✅</div>
-                    <div class="stat-value" id="notif-success">0</div>
-                    <div class="stat-label">Delivered</div>
-                </div>
-                <div class="stat-card amber">
-                    <div class="stat-icon">❌</div>
-                    <div class="stat-value" id="notif-failed">0</div>
-                    <div class="stat-label">Failed</div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>Type</th><th>Recipient</th><th>Subject</th><th>Status</th><th>Time</th></tr></thead>
-                        <tbody id="notification-logs-body">
-                            <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══ AUDIT LOGS ═══ -->
-        <div id="section-audit-logs" class="section">
-            <div class="page-header">
-                <h1 class="page-title">Audit Logs</h1>
-                <p class="page-subtitle">System activity and administrative actions</p>
-            </div>
-            <div class="card">
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>Action</th><th>Details</th><th>IP</th><th>Time</th></tr></thead>
-                        <tbody id="audit-logs-body">
-                            <tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══ CAMPAIGN ANALYTICS (dynamic) ═══ -->
-        <div id="section-campaign-analytics" class="section"></div>
-
-    </main>
-</div>
-
-<!-- ═══ MODALS ═══ -->
-
-<!-- Create Campaign Modal -->
-<div id="campaign-modal" class="modal-overlay" onclick="if(event.target===this)closeModal('campaign-modal')">
-    <div class="modal">
-        <h2 class="modal-title">🎯 New Campaign</h2>
-        <p class="modal-subtitle">Create an authorized security awareness training campaign</p>
-        <form id="create-campaign-form" onsubmit="createCampaign(event)">
-            <div class="form-group">
-                <label class="form-label">Campaign Name *</label>
-                <input type="text" id="campaign-name" class="form-input" placeholder="e.g. Employee Security Awareness — September 2026" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Description</label>
-                <textarea id="campaign-desc" class="form-textarea" placeholder="Describe the campaign objectives…"></textarea>
-            </div>
+        <!-- 1-Click Generator Form -->
+        <div class="generator-card">
             <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Campaign Type</label>
-                    <select id="campaign-type" class="form-select">
-                        <option value="awareness">Security Awareness</option>
-                        <option value="training">Phishing Training</option>
-                        <option value="assessment">Security Assessment</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Expires In (hours)</label>
-                    <input type="number" id="campaign-expiry" class="form-input" value="72" min="1" max="8760">
-                </div>
-            </div>
-
-            <div style="background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);border-radius:12px;padding:16px;margin:16px 0">
-                <h4 style="color:var(--accent-cyan);font-size:13px;margin-bottom:12px">📧 Email Notifications</h4>
-                <div class="form-group">
-                    <label class="form-label">Notification Email</label>
-                    <input type="email" id="campaign-notif-email" class="form-input" placeholder="admin@example.com">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Frequency</label>
-                        <select id="campaign-notif-freq" class="form-select">
-                            <option value="immediate">Immediately</option>
-                            <option value="every_5_min">Every 5 minutes (batch)</option>
-                            <option value="daily">Daily summary</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="display:flex;align-items:end">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding-bottom:14px">
-                            <input type="checkbox" id="campaign-notif-enabled"> Enable email notifications
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:16px;margin:16px 0">
-                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
-                    <input type="checkbox" id="campaign-authorized" style="margin-top:3px" required>
-                    <span style="font-size:13px;color:var(--text-secondary);line-height:1.5">
-                        <strong style="color:var(--accent-amber)">⚠️ Authorization Required</strong><br>
-                        I confirm this campaign is an <strong>authorized security-awareness simulation</strong>
-                        conducted within a controlled lab environment. No credentials, passwords, cookies,
-                        or sensitive data will be collected.
-                    </span>
+                <label class="field-label" for="drill-email">
+                    1. Administrator / Notification Email <span>(Required)</span>
                 </label>
+                <input 
+                    type="email" 
+                    id="drill-email" 
+                    class="input-stylish" 
+                    placeholder="e.g. security-lead@company.local" 
+                    value="admin@lab.local"
+                    required
+                >
+                <div class="field-hint">
+                    ✉️ Telemetry alerts & completion reports will be routed to this recipient.
+                </div>
             </div>
 
-            <div style="display:flex;gap:12px;margin-top:20px">
-                <button type="submit" class="btn btn-primary">🚀 Create Campaign</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal('campaign-modal')">Cancel</button>
+            <div class="form-row">
+                <label class="field-label" for="drill-redirect">
+                    2. Educational Destination URL <span>(e.g. YouTube Video / Training Page)</span>
+                </label>
+                <input 
+                    type="url" 
+                    id="drill-redirect" 
+                    class="input-stylish" 
+                    placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                >
+                <div class="field-hint">
+                    🎯 Participant is redirected here after viewing the security awareness guidelines.
+                </div>
             </div>
-        </form>
-    </div>
-</div>
 
-<!-- Detail Modal (reusable) -->
-<div id="detail-modal" class="modal-overlay" onclick="if(event.target===this)closeModal('detail-modal')">
-    <div class="modal" style="max-width:800px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2 class="modal-title" id="detail-modal-title">Details</h2>
-            <button class="btn btn-sm btn-secondary" onclick="closeModal('detail-modal')">✕</button>
+            <div class="form-row">
+                <label class="field-label" for="drill-name">
+                    3. Campaign Title <span>(Optional)</span>
+                </label>
+                <input 
+                    type="text" 
+                    id="drill-name" 
+                    class="input-stylish" 
+                    placeholder="e.g. Quarterly Team Security Drill"
+                >
+            </div>
+
+            <label class="auth-check">
+                <input type="checkbox" id="drill-auth" checked>
+                <span class="auth-check-text">
+                    I confirm that this is an <strong>authorized security-awareness drill</strong> designed for educational simulation.
+                </span>
+            </label>
+
+            <button id="btn-submit-drill" class="btn-generate" onclick="generateQuickDrill()">
+                ⚡ Generate Simulation Link & QR Code
+            </button>
         </div>
-        <div id="detail-modal-body"></div>
-    </div>
-</div>
 
-<script src="/static/js/app.js"></script>
+        <!-- Generated Link Result Panel -->
+        <div id="result-panel" class="result-panel">
+            <div class="result-header">
+                <div class="result-title">
+                    ✅ Simulation Link Generated Successfully
+                </div>
+                <button class="btn-copy" onclick="openSimulationLink()">
+                    ↗️ Open Simulation Page
+                </button>
+            </div>
+
+            <label class="field-label">Shareable Simulation URL:</label>
+            <div class="link-display-box">
+                <input type="text" id="result-link" class="link-input" readonly>
+                <button class="btn-copy" onclick="copyLink()">
+                    📋 Copy Link
+                </button>
+            </div>
+
+            <div class="qr-and-metrics">
+                <div class="qr-box">
+                    <img id="result-qr-img" class="qr-image" src="" alt="QR Code">
+                    <button class="btn-copy" style="width:100%; justify-content:center;" onclick="downloadQR()">
+                        📥 Download QR
+                    </button>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div id="metric-clicks" class="metric-num">0</div>
+                        <div class="metric-name">Participant Link Clicks</div>
+                    </div>
+                    <div class="metric-card">
+                        <div id="metric-completions" class="metric-num">0</div>
+                        <div class="metric-name">Drill Acknowledged</div>
+                    </div>
+                    <div class="metric-card" style="grid-column: span 2;">
+                        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Notification Status</div>
+                        <div id="metric-notify-email" style="font-size:13px; color:#a78bfa; font-family:'JetBrains Mono'; word-break:break-all;">
+                            Waiting for participant activity...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Telemetry Feed -->
+            <div class="feed-container">
+                <div class="feed-title">
+                    <span>📡 Live Telemetry & Event Log</span>
+                    <span id="feed-status" style="font-size:11px; color:#34d399;">● Listening for clicks...</span>
+                </div>
+                <ul id="feed-list" class="feed-list">
+                    <li class="feed-item" style="color:var(--text-muted); justify-content:center;">
+                        No participant activity yet. Share the generated link above to begin.
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Simple Vanilla JS Logic -->
+    <script>
+        let currentCampaignId = null;
+        let pollingTimer = null;
+
+        function showToast(msg) {
+            const t = document.getElementById("simple-toast");
+            t.textContent = msg;
+            t.style.display = "block";
+            setTimeout(() => { t.style.display = "none"; }, 3500);
+        }
+
+        async function generateQuickDrill() {
+            const email = document.getElementById("drill-email").value.trim();
+            const redirect = document.getElementById("drill-redirect").value.trim();
+            const name = document.getElementById("drill-name").value.trim();
+            const authChecked = document.getElementById("drill-auth").checked;
+
+            if (!email || !email.includes("@")) {
+                showToast("⚠️ Please enter a valid notification email address.");
+                return;
+            }
+
+            if (!authChecked) {
+                showToast("⚠️ You must confirm this is an authorized training drill.");
+                return;
+            }
+
+            const btn = document.getElementById("btn-submit-drill");
+            btn.disabled = true;
+            btn.innerHTML = "⏳ Generating Simulation...";
+
+            try {
+                const response = await fetch("/api/campaigns/quick", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        notification_email: email,
+                        redirect_url: redirect,
+                        name: name,
+                        authorized_simulation: true
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || "Failed to generate link");
+                }
+
+                const data = await response.json();
+                currentCampaignId = data.id;
+
+                // Populate Result Panel
+                document.getElementById("result-link").value = data.simulation_url;
+                document.getElementById("result-qr-img").src = data.qr_code;
+                document.getElementById("metric-clicks").textContent = "0";
+                document.getElementById("metric-completions").textContent = "0";
+                document.getElementById("metric-notify-email").textContent = "Ready: alerts configured to " + data.notification_email;
+
+                // Show panel & scroll
+                const panel = document.getElementById("result-panel");
+                panel.style.display = "block";
+                panel.scrollIntoView({ behavior: "smooth" });
+
+                showToast("⚡ Simulation link and QR code generated!");
+
+                // Start polling stats
+                if (pollingTimer) clearInterval(pollingTimer);
+                pollingTimer = setInterval(pollStats, 2500);
+                pollStats();
+
+            } catch (err) {
+                showToast("❌ " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "⚡ Generate Simulation Link & QR Code";
+            }
+        }
+
+        function copyLink() {
+            const linkInput = document.getElementById("result-link");
+            linkInput.select();
+            navigator.clipboard.writeText(linkInput.value);
+            showToast("📋 Link copied to clipboard!");
+        }
+
+        function openSimulationLink() {
+            const url = document.getElementById("result-link").value;
+            if (url) window.open(url, "_blank");
+        }
+
+        function downloadQR() {
+            const img = document.getElementById("result-qr-img");
+            if (!img.src) return;
+            const a = document.createElement("a");
+            a.href = img.src;
+            a.download = "phishguard-qr.png";
+            a.click();
+        }
+
+        async function pollStats() {
+            if (!currentCampaignId) return;
+
+            try {
+                const res = await fetch(`/api/campaigns/${currentCampaignId}/quick-stats`);
+                if (!res.ok) return;
+
+                const data = await res.json();
+                document.getElementById("metric-clicks").textContent = data.total_clicks;
+                document.getElementById("metric-completions").textContent = data.total_completions;
+
+                const list = document.getElementById("feed-list");
+                if (data.recent_events && data.recent_events.length > 0) {
+                    list.innerHTML = data.recent_events.map(ev => {
+                        const isSubmit = ev.event_type === "submit" || ev.event_type === "training_completed";
+                        const badgeClass = isSubmit ? "submit" : "click";
+                        const badgeText = isSubmit ? "DRILL ACKNOWLEDGED" : "LINK OPENED";
+                        const timeStr = ev.timestamp ? ev.timestamp.split(" ")[1].slice(0, 8) : "";
+
+                        return `
+                            <li class="feed-item">
+                                <div>
+                                    <span class="feed-badge ${badgeClass}">${badgeText}</span>
+                                    <span style="color:#cbd5e1; margin-left:8px;">${ev.browser} on ${ev.os} (${ev.device})</span>
+                                </div>
+                                <div style="color:var(--text-muted); font-family:'JetBrains Mono'; font-size:11px;">
+                                    ${timeStr} · ${ev.session_id}
+                                </div>
+                            </li>
+                        `;
+                    }).join("");
+                    document.getElementById("feed-status").textContent = `● Active (${data.recent_events.length} events logged)`;
+                }
+            } catch (e) {
+                console.error("Telemetry poll error:", e);
+            }
+        }
+    </script>
 </body>
 </html>

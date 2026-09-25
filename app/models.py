@@ -59,6 +59,7 @@ class Campaign(Base):
 
     # Authorization confirmation
     authorized_simulation = Column(Boolean, default=False)
+    redirect_url = Column(String(500), default="")
 
     owner = relationship("User", back_populates="campaigns")
     targets = relationship(

@@ -26,6 +26,15 @@ def get_db():
 
 
 def init_db():
-    """Create all database tables."""
+    """Create all database tables and perform lightweight schema migrations."""
     from app import models  # noqa: F401 — triggers table registration
     Base.metadata.create_all(bind=engine)
+
+    # Lightweight migration check for new columns on SQLite
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE campaigns ADD COLUMN redirect_url TEXT DEFAULT ''"))
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
