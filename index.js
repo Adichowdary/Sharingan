@@ -1,0 +1,1 @@
+console vlog('Hello, World!');

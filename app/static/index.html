@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishGuard — Security Awareness Platform</title>
+    <meta name="description" content="Phishing Simulation & Security Analysis Dashboard">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+<!-- ═══ Toast Container ═══ -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="login-screen" class="login-screen">
+    <div class="login-card">
+        <div class="login-logo">🛡️</div>
+        <h1 class="login-title">PhishGuard</h1>
+        <p class="login-subtitle">Security Awareness Platform</p>
+        <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" id="login-username" class="form-input" placeholder="Enter username" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" id="login-password" class="form-input" placeholder="Enter password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Sign In</button>
+            <p id="login-error" class="login-error"></p>
+        </form>
+    </div>
+</div>
+
+<!-- ═══ APP LAYOUT ═══ -->
+<div id="app-layout" class="app-layout" style="display:none">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a class="sidebar-logo" onclick="navigate('dashboard')">
+                <div class="logo-icon">🛡️</div>
+                <div>
+                    <div class="logo-text">PhishGuard</div>
+                    <div class="logo-version">v2.0</div>
+                </div>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Overview</div>
+                <a class="nav-item active" data-nav="dashboard" onclick="navigate('dashboard')">
+                    <span class="nav-icon">📊</span> Dashboard
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Campaigns</div>
+                <a class="nav-item" data-nav="campaigns" onclick="navigate('campaigns')">
+                    <span class="nav-icon">🎯</span> Campaigns
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Security</div>
+                <a class="nav-item" data-nav="url-analyzer" onclick="navigate('url-analyzer')">
+                    <span class="nav-icon">🔍</span> URL Analyzer
+                </a>
+                <a class="nav-item" data-nav="scan-history" onclick="navigate('scan-history')">
+                    <span class="nav-icon">📋</span> Scan History
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Notifications</div>
+                <a class="nav-item" data-nav="email-settings" onclick="navigate('email-settings')">
+                    <span class="nav-icon">✉️</span> Email Settings
+                </a>
+                <a class="nav-item" data-nav="notification-logs" onclick="navigate('notification-logs')">
+                    <span class="nav-icon">🔔</span> Notification Logs
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a class="nav-item" data-nav="audit-logs" onclick="navigate('audit-logs')">
+                    <span class="nav-icon">🧾</span> Audit Logs
+                </a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-badge">
+                <div class="user-avatar" id="user-avatar-letter">A</div>
+                <div class="user-info">
+                    <div class="user-name" id="display-username">admin</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button class="btn-logout" onclick="logout()" title="Logout">🚪</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- ═══ DASHBOARD ═══ -->
+        <div id="section-dashboard" class="section active">
+            <div class="page-header">
+                <h1 class="page-title">Dashboard</h1>
+                <p class="page-subtitle">Security awareness campaign overview</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card purple">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-value" id="stat-campaigns">0</div>
+                    <div class="stat-label">Total Campaigns</div>
+                </div>
+                <div class="stat-card cyan">
+                    <div class="stat-icon">▶️</div>
+                    <div class="stat-value" id="stat-active">0</div>
+                    <div class="stat-label">Active Campaigns</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="stat-targets">0</div>
+                    <div class="stat-label">Total Targets</div>
+                </div>
+                <div class="stat-card amber">
+                    <div class="stat-icon">🖱️</div>
+                    <div class="stat-value" id="stat-clicked">0</div>
+                    <div class="stat-label">Links Opened</div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-value" id="stat-submitted">0</div>
+                    <div class="stat-label">Training Completed</div>
+                </div>
+                <div class="stat-card cyan">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-value" id="stat-click-rate">0%</div>
+                    <div class="stat-label">Click Rate</div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-icon">🔍</div>
+                    <div class="stat-value" id="stat-url-scans">0</div>
+                    <div class="stat-label">URL Scans</div>
+                </div>
+                <div class="stat-card amber">
+                    <div class="stat-icon">📡</div>
+                    <div class="stat-value" id="stat-events">0</div>
+                    <div class="stat-label">Total Events</div>
+                </div>
+            </div>
+
+            <!-- Real-time Event Feed -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;margin-right:6px;animation:pulse 2s infinite"></span>
+                        Live Event Feed
+                    </span>
+                    <span class="badge badge-active" id="sse-status">Connecting…</span>
+                </div>
+                <div id="live-feed" style="max-height:360px;overflow-y:auto">
+                    <div class="empty-state" style="padding:30px" id="live-feed-empty">
+                        <p>Waiting for campaign events…</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ CAMPAIGNS ═══ -->
+        <div id="section-campaigns" class="section">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div>
+                    <h1 class="page-title">Campaigns</h1>
+                    <p class="page-subtitle">Manage security awareness training campaigns</p>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('campaign-modal')">+ New Campaign</button>
+            </div>
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Name</th><th>Status</th><th>Targets</th><th>Clicked</th><th>Rate</th><th>Email</th><th>Created</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="campaigns-table-body">
+                            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ URL ANALYZER ═══ -->
+        <div id="section-url-analyzer" class="section">
+            <div class="page-header">
+                <h1 class="page-title">URL Security Analyzer</h1>
+                <p class="page-subtitle">Analyze URLs for phishing indicators and security posture</p>
+            </div>
+            <div class="card" style="margin-bottom:20px">
+                <form onsubmit="analyzeURL(event)">
+                    <div class="form-group">
+                        <label class="form-label">Enter URL to Analyze</label>
+                        <div style="display:flex;gap:12px">
+                            <input type="text" id="url-input" class="form-input" placeholder="https://example.com" required style="flex:1">
+                            <button type="submit" class="btn btn-primary">🔍 Analyze</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div id="url-results"></div>
+        </div>
+
+        <!-- ═══ SCAN HISTORY ═══ -->
+        <div id="section-scan-history" class="section">
+            <div class="page-header">
+                <h1 class="page-title">Scan History</h1>
+                <p class="page-subtitle">Previous URL security scan results</p>
+            </div>
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>URL</th><th>Risk Level</th><th>Score</th><th>Date</th></tr></thead>
+                        <tbody id="scan-history-body"><tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ EMAIL SETTINGS ═══ -->
+        <div id="section-email-settings" class="section">
+            <div class="page-header">
+                <h1 class="page-title">Email Settings</h1>
+                <p class="page-subtitle">Configure SMTP for campaign notifications</p>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><span class="card-title">✉️ SMTP Configuration</span></div>
+                    <form onsubmit="saveEmailConfig(event)">
+                        <div class="form-group">
+                            <label class="form-label">SMTP Provider</label>
+                            <select id="smtp-provider" class="form-select" onchange="onProviderChange()">
+                                <option value="gmail">Gmail</option>
+                                <option value="outlook">Outlook</option>
+                                <option value="yahoo">Yahoo</option>
+                                <option value="custom">Custom SMTP</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">SMTP Host</label>
+                                <input type="text" id="smtp-host" class="form-input" placeholder="smtp.gmail.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">SMTP Port</label>
+                                <input type="number" id="smtp-port" class="form-input" value="587">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">SMTP Username</label>
+                            <input type="text" id="smtp-username" class="form-input" placeholder="your-email@gmail.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">SMTP Password / App Password</label>
+                            <input type="password" id="smtp-password" class="form-input" placeholder="Enter password (leave blank to keep current)">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sender Email</label>
+                            <input type="text" id="sender-email" class="form-input" placeholder="noreply@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sender Display Name</label>
+                            <input type="text" id="sender-name" class="form-input" value="PhishGuard">
+                        </div>
+                        <div style="display:flex;gap:12px;margin-top:16px">
+                            <button type="submit" class="btn btn-primary">💾 Save Configuration</button>
+                            <button type="button" class="btn btn-secondary" onclick="sendTestEmail()">📧 Send Test Email</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span class="card-title">🔔 Notification Triggers</span></div>
+                    <div style="margin-bottom:20px">
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer">
+                            <input type="checkbox" id="notify-click" checked> <span>Link opened</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer">
+                            <input type="checkbox" id="notify-submit" checked> <span>Training completed</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer">
+                            <input type="checkbox" id="notify-location"> <span>Location permission event</span>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px 0;cursor:pointer">
+                            <input type="checkbox" id="notify-daily"> <span>Daily summary</span>
+                        </label>
+                    </div>
+                    <div class="card" style="background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.2)">
+                        <p style="font-size:13px;color:var(--text-secondary);line-height:1.6">
+                            <strong style="color:var(--accent-purple-light)">🔒 Security Note</strong><br>
+                            SMTP credentials are stored server-side only.
+                            Never exposed in frontend code. For production use, prefer
+                            app-specific passwords or a transactional email API.
+                        </p>
+                    </div>
+                    <div id="email-config-status" style="margin-top:16px"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ NOTIFICATION LOGS ═══ -->
+        <div id="section-notification-logs" class="section">
+            <div class="page-header">
+                <h1 class="page-title">Notification Logs</h1>
+                <p class="page-subtitle">Email notification delivery history</p>
+            </div>
+            <div class="stats-grid" style="margin-bottom:20px">
+                <div class="stat-card green">
+                    <div class="stat-icon">📧</div>
+                    <div class="stat-value" id="notif-total">0</div>
+                    <div class="stat-label">Total Sent</div>
+                </div>
+                <div class="stat-card cyan">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value" id="notif-success">0</div>
+                    <div class="stat-label">Delivered</div>
+                </div>
+                <div class="stat-card amber">
+                    <div class="stat-icon">❌</div>
+                    <div class="stat-value" id="notif-failed">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Type</th><th>Recipient</th><th>Subject</th><th>Status</th><th>Time</th></tr></thead>
+                        <tbody id="notification-logs-body">
+                            <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ AUDIT LOGS ═══ -->
+        <div id="section-audit-logs" class="section">
+            <div class="page-header">
+                <h1 class="page-title">Audit Logs</h1>
+                <p class="page-subtitle">System activity and administrative actions</p>
+            </div>
+            <div class="card">
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>Action</th><th>Details</th><th>IP</th><th>Time</th></tr></thead>
+                        <tbody id="audit-logs-body">
+                            <tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ CAMPAIGN ANALYTICS (dynamic) ═══ -->
+        <div id="section-campaign-analytics" class="section"></div>
+
+    </main>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Create Campaign Modal -->
+<div id="campaign-modal" class="modal-overlay" onclick="if(event.target===this)closeModal('campaign-modal')">
+    <div class="modal">
+        <h2 class="modal-title">🎯 New Campaign</h2>
+        <p class="modal-subtitle">Create an authorized security awareness training campaign</p>
+        <form id="create-campaign-form" onsubmit="createCampaign(event)">
+            <div class="form-group">
+                <label class="form-label">Campaign Name *</label>
+                <input type="text" id="campaign-name" class="form-input" placeholder="e.g. Employee Security Awareness — September 2026" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="campaign-desc" class="form-textarea" placeholder="Describe the campaign objectives…"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Campaign Type</label>
+                    <select id="campaign-type" class="form-select">
+                        <option value="awareness">Security Awareness</option>
+                        <option value="training">Phishing Training</option>
+                        <option value="assessment">Security Assessment</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Expires In (hours)</label>
+                    <input type="number" id="campaign-expiry" class="form-input" value="72" min="1" max="8760">
+                </div>
+            </div>
+
+            <div style="background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.2);border-radius:12px;padding:16px;margin:16px 0">
+                <h4 style="color:var(--accent-cyan);font-size:13px;margin-bottom:12px">📧 Email Notifications</h4>
+                <div class="form-group">
+                    <label class="form-label">Notification Email</label>
+                    <input type="email" id="campaign-notif-email" class="form-input" placeholder="admin@example.com">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Frequency</label>
+                        <select id="campaign-notif-freq" class="form-select">
+                            <option value="immediate">Immediately</option>
+                            <option value="every_5_min">Every 5 minutes (batch)</option>
+                            <option value="daily">Daily summary</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:end">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding-bottom:14px">
+                            <input type="checkbox" id="campaign-notif-enabled"> Enable email notifications
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:16px;margin:16px 0">
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+                    <input type="checkbox" id="campaign-authorized" style="margin-top:3px" required>
+                    <span style="font-size:13px;color:var(--text-secondary);line-height:1.5">
+                        <strong style="color:var(--accent-amber)">⚠️ Authorization Required</strong><br>
+                        I confirm this campaign is an <strong>authorized security-awareness simulation</strong>
+                        conducted within a controlled lab environment. No credentials, passwords, cookies,
+                        or sensitive data will be collected.
+                    </span>
+                </label>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-top:20px">
+                <button type="submit" class="btn btn-primary">🚀 Create Campaign</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('campaign-modal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Detail Modal (reusable) -->
+<div id="detail-modal" class="modal-overlay" onclick="if(event.target===this)closeModal('detail-modal')">
+    <div class="modal" style="max-width:800px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h2 class="modal-title" id="detail-modal-title">Details</h2>
+            <button class="btn btn-sm btn-secondary" onclick="closeModal('detail-modal')">✕</button>
+        </div>
+        <div id="detail-modal-body"></div>
+    </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
