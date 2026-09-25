@@ -80,24 +80,34 @@ phishguard/
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/<YOUR_USERNAME>/phishguard.git
-cd phishguard
+git clone https://github.com/Adichowdary/Sharingan.git
+cd Sharingan
 ```
 
 ### 2️⃣ Setup (first time)
 
 **Kali Linux / Ubuntu / Debian:**
 ```bash
-chmod +x start.sh phishguard.py
+chmod +x start.sh sharingan.py
 ./start.sh setup
 ```
 
 **Windows CMD / PowerShell:**
 ```cmd
-python phishguard.py setup
+python sharingan.py setup
 ```
 
-### 3️⃣ Start the Server
+### 3️⃣ Launch Interactive Terminal CLI
+
+**Kali Linux:**
+```bash
+./start.sh
+```
+
+**Windows CMD / PowerShell:**
+```cmd
+python sharingan.py
+```
 
 **Kali / Linux:**
 ```bash
