@@ -140,7 +140,7 @@ async def landing_page(
         "device": ua_parsed["device"],
         "timestamp": str(event.timestamp),
     }
-    background_tasks.add_task(asyncio.ensure_future, broadcast_event(sse_data))
+    background_tasks.add_task(broadcast_event, sse_data)
 
     # Trigger notification
     if campaign.notifications_enabled and campaign.notification_email:
@@ -203,7 +203,7 @@ async def record_event(
         "location_consent": body.location_consent,
         "timestamp": str(event.timestamp),
     }
-    background_tasks.add_task(asyncio.ensure_future, broadcast_event(sse_data))
+    background_tasks.add_task(broadcast_event, sse_data)
 
     # Trigger notification
     if campaign and campaign.notifications_enabled and campaign.notification_email:
@@ -213,33 +213,105 @@ async def record_event(
 
 
 # ── Notification Trigger ──────────────────────────────────────────────
+def _send_notification_sync(campaign_id: int, event_id: int, event_type: str, session_id: str, timestamp_str: str, browser_info: str, device_info: str):
+    """Send email notification in background thread."""
+    from app.database import SessionLocal
+    from app.models import Campaign, EmailConfig, NotificationLog
+    from app.services.email_service import send_email, render_event_email
+
+    db = SessionLocal()
+    try:
+        campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+        if not campaign or not campaign.notifications_enabled or not campaign.notification_email:
+            return
+
+        email_cfg = (
+            db.query(EmailConfig)
+            .filter(EmailConfig.user_id == campaign.user_id, EmailConfig.enabled == True)
+            .first()
+        )
+
+        subject, html = render_event_email(
+            campaign_name=campaign.name,
+            event_type=event_type,
+            session_id=session_id,
+            timestamp=timestamp_str,
+            browser_info=browser_info,
+            device_info=device_info,
+            dashboard_url=f"{settings.BASE_URL}/#campaigns",
+        )
+
+        smtp_kwargs = {}
+        if email_cfg:
+            smtp_kwargs = {
+                "smtp_host": email_cfg.smtp_host,
+                "smtp_port": email_cfg.smtp_port,
+                "smtp_username": email_cfg.smtp_username,
+                "smtp_password": email_cfg.smtp_password_encrypted,
+                "sender_email": email_cfg.sender_email,
+                "sender_name": email_cfg.sender_name or "Sharingan",
+            }
+
+        result = send_email(campaign.notification_email, subject, html, **smtp_kwargs)
+
+        log = NotificationLog(
+            campaign_id=campaign.id,
+            event_id=event_id,
+            notification_type=event_type,
+            recipient_email=campaign.notification_email,
+            subject=subject,
+            status=result["status"],
+            error_message=result.get("error"),
+            sent_at=datetime.now(timezone.utc) if result["status"] == "sent" else None,
+        )
+        db.add(log)
+        db.commit()
+    except Exception as e:
+        import logging
+        logging.getLogger("phishguard.email").error(f"Notification error: {e}")
+    finally:
+        db.close()
+
+
 def _trigger_notification(campaign, event, ua_parsed, background_tasks):
     """Decide how to route the notification based on campaign frequency."""
-    job = {
-        "campaign_id": campaign.id,
-        "event_id": event.id,
-        "event_type": event.event_type,
-        "session_id": event.session_id,
-        "timestamp": str(event.timestamp),
-        "browser_info": ua_parsed.get("browser", ""),
-        "device_info": f"{ua_parsed.get('os', '')} / {ua_parsed.get('device', '')}",
-        "dashboard_url": f"{settings.BASE_URL}/#campaigns",
-    }
-
     freq = campaign.notification_frequency or "immediate"
 
     if freq == "immediate":
         if check_cooldown(campaign.id):
-            background_tasks.add_task(asyncio.ensure_future, enqueue_notification(job))
+            background_tasks.add_task(
+                _send_notification_sync,
+                campaign.id,
+                event.id,
+                event.event_type,
+                event.session_id,
+                str(event.timestamp),
+                ua_parsed.get("browser", ""),
+                f"{ua_parsed.get('os', '')} / {ua_parsed.get('device', '')}",
+            )
     elif freq == "every_5_min":
+        job = {
+            "campaign_id": campaign.id,
+            "event_id": event.id,
+            "event_type": event.event_type,
+            "session_id": event.session_id,
+            "timestamp": str(event.timestamp),
+            "browser_info": ua_parsed.get("browser", ""),
+            "device_info": f"{ua_parsed.get('os', '')} / {ua_parsed.get('device', '')}",
+            "dashboard_url": f"{settings.BASE_URL}/#campaigns",
+        }
         add_to_batch(campaign.id, job)
-    # "daily" is handled by the daily summary cron (separate worker)
 
 
 # ── Render Landing HTML ───────────────────────────────────────────────
 def _render_landing_html(token: str, campaign_name: str, target_name: str, redirect_url: str = "") -> str:
     """Generate the security awareness training HTML page."""
     greeting = f'Hello <strong>{target_name}</strong>! ' if target_name else ''
+    
+    # Ensure scheme
+    if redirect_url and not redirect_url.startswith(("http://", "https://")):
+        redirect_url = "https://" + redirect_url
+
     redirect_html = ""
     if redirect_url:
         redirect_html = f"""
@@ -375,14 +447,18 @@ def _render_landing_html(token: str, campaign_name: str, target_name: str, redir
                 text.innerHTML = "✅ Training completed and verified! Thank you for staying vigilant against phishing.<br><small>Session ID: " + (data.session_id || "") + "</small>";
 
                 if (REDIRECT_URL) {{
-                    text.innerHTML += "<br><span style='color:#60a5fa'>Redirecting to training resource in 2 seconds...</span>";
+                    text.innerHTML += "<br><span style='color:#60a5fa;font-weight:600;'>Redirecting to training video in 2 seconds...</span>";
                     setTimeout(() => {{
                         window.location.href = REDIRECT_URL;
                     }}, 2000);
                 }}
             }} catch (err) {{
                 console.error("Submit error:", err);
+                if (REDIRECT_URL) {{
+                    window.location.href = REDIRECT_URL;
+                }}
             }}
+        }}
     </script>
 </body>
 </html>"""

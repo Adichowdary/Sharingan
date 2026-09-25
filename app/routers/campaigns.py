@@ -121,6 +121,7 @@ def create_campaign(
         notification_frequency=body.notification_frequency,
         notifications_enabled=body.notifications_enabled,
         authorized_simulation=body.authorized_simulation,
+        redirect_url=body.redirect_url.strip() if body.redirect_url else "",
     )
     db.add(campaign)
     db.commit()

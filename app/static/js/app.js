@@ -204,6 +204,7 @@ async function createCampaign(e) {
             notification_frequency: document.getElementById('campaign-notif-freq').value,
             notifications_enabled: document.getElementById('campaign-notif-enabled').checked,
             authorized_simulation: document.getElementById('campaign-authorized').checked,
+            redirect_url: document.getElementById('campaign-redirect-url') ? document.getElementById('campaign-redirect-url').value.trim() : "",
         });
         showToast('Campaign created!', 'success');
         closeModal('campaign-modal');

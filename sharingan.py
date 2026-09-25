@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PhishGuard — Interactive Terminal CLI
+Sharingan — Interactive Terminal CLI
 A professional, terminal-based cybersecurity awareness and simulation tool
 inspired by classic security utilities (XPHISHER / Social Engineering Toolkit).
 Works on: Kali Linux, Ubuntu, Debian, Windows CMD / PowerShell, macOS
@@ -97,7 +97,7 @@ def cmd_check():
         except ImportError:
             _ch(f"Module: {pkg}", False, detail_fail="NOT installed")
 
-    db_path = Path(__file__).parent / "phishguard.db"
+    db_path = Path(__file__).parent / "sharingan.db"
     _ch("Database Storage", db_path.exists(), f"Found ({db_path.stat().st_size} bytes)" if db_path.exists() else "", "Will be initialized on first run")
 
     print(f"\n  Result: {_c('1;32' if passed == total else '1;33', f'{passed}/{total}')} checks passed.\n")
@@ -123,6 +123,105 @@ def cmd_setup():
     input(_c("90", "  Press Enter to return to menu..."))
 
 
+# ── SMTP Email Configuration Wizard ───────────────────────────────────
+def cmd_configure_smtp():
+    """Interactive SMTP setup wizard for real email delivery."""
+    print_banner()
+    print(_c("1;33", "  [:: SMTP OUTGOING EMAIL CONFIGURATION ::]\n"))
+    print("  To deliver real alert emails to an inbox (Gmail, Outlook, etc.),")
+    print("  Sharingan connects through an authenticated SMTP relay.\n")
+    print(_c("1;36", "  [01]") + " Gmail (Requires 16-character Google App Password)")
+    print(_c("1;36", "  [02]") + " Outlook / Hotmail / Office365")
+    print(_c("1;36", "  [03]") + " Custom SMTP Server")
+    print(_c("1;31", "  [00]") + " Back to Menu\n")
+
+    p = input(_c("1;32", "  Select provider [1-3]: ")).strip()
+    if p in ("0", "00", "back", "exit"):
+        return
+
+    from app.database import init_db, SessionLocal
+    from app.models import EmailConfig, User
+    from app.auth import hash_password
+    from app.services.email_service import send_email
+    init_db()
+    db = SessionLocal()
+
+    user = db.query(User).first()
+    if not user:
+        user = User(username="admin", password_hash=hash_password("AdminPassword123!"))
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    if p in ("1", "01"):
+        provider = "gmail"
+        host = "smtp.gmail.com"
+        port = 587
+        print(_c("1;35", "\n  [*] Note: For Gmail, generate an 'App Password' at: https://myaccount.google.com/apppasswords"))
+        user_email = input(_c("1;37", "  [?] Your Gmail Address: ")).strip()
+        pwd = input(_c("1;37", "  [?] Gmail App Password (16 characters): ")).strip().replace(" ", "")
+    elif p in ("2", "02"):
+        provider = "outlook"
+        host = "smtp-mail.outlook.com"
+        port = 587
+        user_email = input(_c("1;37", "  [?] Your Outlook Email: ")).strip()
+        pwd = input(_c("1;37", "  [?] Outlook Password: ")).strip()
+    elif p in ("3", "03"):
+        provider = "custom"
+        host = input(_c("1;37", "  [?] SMTP Host (e.g. mail.domain.com): ")).strip()
+        raw_port = input(_c("1;37", "  [?] SMTP Port [587]: ")).strip()
+        port = int(raw_port) if raw_port.isdigit() else 587
+        user_email = input(_c("1;37", "  [?] SMTP Username / Email: ")).strip()
+        pwd = input(_c("1;37", "  [?] SMTP Password: ")).strip()
+    else:
+        db.close()
+        return
+
+    if not user_email or not pwd:
+        print(_c("1;31", "\n  [✗] Email and password cannot be empty."))
+        db.close()
+        input(_c("90", "  Press Enter to return..."))
+        return
+
+    print(_c("1;33", f"\n  [*] Testing connection and sending verification email to {user_email}..."))
+    res = send_email(
+        to_email=user_email,
+        subject="👁️ Sharingan — SMTP Verification Successful",
+        html_body="<h3>Sharingan Alert System</h3><p>Your SMTP mail configuration is verified and ready to deliver real-time security drill alerts to your inbox.</p>",
+        smtp_host=host,
+        smtp_port=port,
+        smtp_username=user_email,
+        smtp_password=pwd,
+        sender_email=user_email,
+        sender_name="Sharingan",
+    )
+
+    if res["status"] == "sent":
+        print(_c("1;32", f"  [✓] SUCCESS: Verification email sent to {user_email}!"))
+        # Save to EmailConfig
+        cfg = db.query(EmailConfig).filter(EmailConfig.user_id == user.id).first()
+        if not cfg:
+            cfg = EmailConfig(user_id=user.id)
+            db.add(cfg)
+        cfg.smtp_provider = provider
+        cfg.smtp_host = host
+        cfg.smtp_port = port
+        cfg.smtp_username = user_email
+        cfg.smtp_password_encrypted = pwd
+        cfg.sender_email = user_email
+        cfg.sender_name = "Sharingan"
+        cfg.is_verified = True
+        cfg.enabled = True
+        db.commit()
+        print(_c("1;32", "  [✓] Configuration saved to database. Real emails are now ACTIVE."))
+    else:
+        print(_c("1;31", f"  [✗] CONNECTION FAILED: {res.get('error')}"))
+        print(_c("90", "      Tip: If using Gmail, make sure 2-Step Verification is ON and generate an App Password."))
+
+    db.close()
+    input(_c("90", "\n  Press Enter to return to menu..."))
+
+
 # ── Interactive Drill Runner ──────────────────────────────────────────
 def run_interactive_drill(default_redirect: str = "", drill_type_label: str = "Drill"):
     """Run an interactive simulation drill entirely from the terminal."""
@@ -143,6 +242,10 @@ def run_interactive_drill(default_redirect: str = "", drill_type_label: str = "D
         if not redirect_url:
             redirect_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
+    # Normalize URL scheme
+    if redirect_url and not redirect_url.startswith(("http://", "https://")):
+        redirect_url = "https://" + redirect_url
+
     # 3. Prompt Port
     raw_port = input(_c("1;37", "  [?] Enter Server Port [8000]: ")).strip()
     port = int(raw_port) if raw_port.isdigit() else 8000
@@ -152,7 +255,7 @@ def run_interactive_drill(default_redirect: str = "", drill_type_label: str = "D
 
     # Initialize DB & create campaign programmatically
     from app.database import init_db, SessionLocal
-    from app.models import Campaign, CampaignTarget, Event, User
+    from app.models import Campaign, CampaignTarget, Event, EmailConfig, NotificationLog, User
     from app.auth import hash_password
 
     init_db()
@@ -193,6 +296,9 @@ def run_interactive_drill(default_redirect: str = "", drill_type_label: str = "D
 
     cid = campaign.id
     token = target.token
+
+    email_cfg = db.query(EmailConfig).filter(EmailConfig.user_id == user.id, EmailConfig.enabled == True).first()
+    has_smtp = bool(email_cfg and email_cfg.smtp_host and email_cfg.smtp_username)
     db.close()
 
     # Start background uvicorn server quietly
@@ -222,7 +328,12 @@ def run_interactive_drill(default_redirect: str = "", drill_type_label: str = "D
     print(_c("1;32", "  [✓] Simulation Server Started Successfully!\n"))
     print(_c("1;37", f"  [*] Local Link   : ") + _c("1;36", local_url))
     print(_c("1;37", f"  [*] Network Link : ") + _c("1;36", lan_url))
-    print(_c("1;37", f"  [*] Alerts Email : ") + _c("1;33", notify_email))
+    
+    if has_smtp:
+        print(_c("1;37", f"  [*] Alerts Email : ") + _c("1;32", f"{notify_email} (SMTP Connected - Real Emails Active)"))
+    else:
+        print(_c("1;37", f"  [*] Alerts Email : ") + _c("1;33", f"{notify_email} (Local/Terminal Mode — Run [03] in menu to enable inbox delivery)"))
+
     print(_c("1;37", f"  [*] Destination  : ") + _c("1;35", redirect_url))
     print()
 
@@ -262,6 +373,9 @@ def run_interactive_drill(default_redirect: str = "", drill_type_label: str = "D
                 last_event_id = ev.id
                 time_now = datetime.now().strftime("%H:%M:%S")
 
+                # Check notification log for delivery status
+                notif = db.query(NotificationLog).filter(NotificationLog.event_id == ev.id).first()
+
                 if ev.event_type == "click":
                     total_clicks += 1
                     print(_c("1;33", f"  [+] [{time_now}] 🎯 LINK OPENED BY PARTICIPANT!"))
@@ -269,7 +383,12 @@ def run_interactive_drill(default_redirect: str = "", drill_type_label: str = "D
                     print(f"      ├── Device / OS: {_c('1;36', f'{ev.os_family} ({ev.device_category})')}")
                     print(f"      ├── Browser    : {_c('1;36', ev.browser_family or 'Browser')}")
                     print(f"      ├── Session ID : {_c('1;90', ev.session_id)}")
-                    print(f"      └── Alert      : {_c('32', f'Notification sent -> {notify_email}')}\n")
+                    if notif and notif.status == "sent":
+                        print(f"      └── Alert      : {_c('1;32', f'✓ Real email delivered to {notify_email}')}\n")
+                    elif notif and notif.status == "failed":
+                        print(f"      └── Alert      : {_c('1;31', f'✗ Email delivery failed: {notif.error_message}')}\n")
+                    else:
+                        print(f"      └── Alert      : {_c('1;33', f'ℹ Logged to terminal & DB (Run option 03 to enable real emails)')}\n")
 
                 elif ev.event_type in ("submit", "training_completed"):
                     total_completed += 1
@@ -303,8 +422,9 @@ def interactive_menu():
         print(_c("1;37", "  [:: SELECT AN OPTION ::]\n"))
         print(_c("1;36", "  [01]") + " YouTube Security Awareness Drill")
         print(_c("1;36", "  [02]") + " Custom Educational Redirect Drill")
-        print(_c("1;36", "  [03]") + " Run Health Diagnostics Check")
-        print(_c("1;36", "  [04]") + " Install / Update Dependencies")
+        print(_c("1;36", "  [03]") + " Configure SMTP Email (Gmail / Outlook / Custom)")
+        print(_c("1;36", "  [04]") + " Run Health Diagnostics Check")
+        print(_c("1;36", "  [05]") + " Install / Update Dependencies")
         print(_c("1;31", "  [00]") + " Exit\n")
 
         choice = input(_c("1;31", "  sharingan > ")).strip()
@@ -321,8 +441,11 @@ def interactive_menu():
             )
         elif choice in ("3", "03"):
             clear_screen()
-            cmd_check()
+            cmd_configure_smtp()
         elif choice in ("4", "04"):
+            clear_screen()
+            cmd_check()
+        elif choice in ("5", "05"):
             clear_screen()
             cmd_setup()
         elif choice in ("0", "00", "exit", "quit"):
@@ -336,7 +459,7 @@ def main():
         prog="sharingan",
         description="Sharingan — Terminal-Based Cybersecurity Awareness & Simulation Platform",
     )
-    parser.add_argument("command", nargs="?", choices=["menu", "start", "setup", "check"], default="menu", help="Execution mode (default: interactive menu)")
+    parser.add_argument("command", nargs="?", choices=["menu", "start", "setup", "check", "smtp"], default="menu", help="Execution mode (default: interactive menu)")
     parser.add_argument("--host", default=os.getenv("HOST", "0.0.0.0"), help="Bind host")
     parser.add_argument("--port", type=int, default=int(os.getenv("PORT", "8000")), help="Bind port")
     parser.add_argument("--no-reload", action="store_true", help="Disable auto-reload")
@@ -347,15 +470,15 @@ def main():
         cmd_setup()
     elif args.command == "check":
         cmd_check()
+    elif args.command == "smtp":
+        cmd_configure_smtp()
     elif args.command == "start":
-        # Direct server start without menu
         from app.main import app
         import uvicorn
         print_banner()
-        print(_c("1;32", f"  [+] Starting PhishGuard Server on {args.host}:{args.port}...\n"))
+        print(_c("1;32", f"  [+] Starting Sharingan Server on {args.host}:{args.port}...\n"))
         uvicorn.run("app.main:app", host=args.host, port=args.port, reload=not args.no_reload)
     else:
-        # Default: Interactive Terminal CLI
         interactive_menu()
 
 
