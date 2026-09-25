@@ -8,12 +8,12 @@ import secrets
 class Settings:
     """Application settings loaded from environment variables with defaults."""
 
-    PROJECT_NAME: str = "PhishGuard"
+    PROJECT_NAME: str = "Sharingan"
     VERSION: str = "2.0.0"
-    DESCRIPTION: str = "Phishing Simulation & Security Analysis Platform"
+    DESCRIPTION: str = "Sharingan — Security Awareness Simulation & Telemetry Platform"
 
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./phishguard.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./sharingan.db")
 
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", secrets.token_hex(32))

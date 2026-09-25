@@ -1,13 +1,13 @@
-# 🛡️ PhishGuard v2.0
+# 👁️ Sharingan v2.0
 
-**Phishing Simulation & Security Analysis Platform**
+**Terminal-Based Cybersecurity Awareness & Simulation Platform**
 
-A professional, cross-platform security awareness training tool built with FastAPI + vanilla JS. Designed for red-team labs and security training — **not** for credential harvesting.
+An elite, interactive terminal security awareness training tool built for Kali Linux and Windows CMD/PowerShell. Designed for authorized red-team security drills and cybersecurity student training.
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green)
 ![License](https://img.shields.io/badge/License-MIT-purple)
-![Platform](https://img.shields.io/badge/Platform-Kali%20|%20Windows%20|%20Linux%20|%20macOS-orange)
+![Platform](https://img.shields.io/badge/Platform-Kali%20|%20Windows%20|%20Linux%20|%20macOS-red)
 
 ---
 

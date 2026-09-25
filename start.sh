@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════
-#  PhishGuard — Kali Linux / Linux / macOS Startup Script
+#  Sharingan — Kali Linux / Linux / macOS Startup Script
 #  Usage: ./start.sh
 #         ./start.sh setup
 #         ./start.sh check
-#         ./start.sh --port 9000
 # ═══════════════════════════════════════════════════════════
 
 set -e
@@ -26,7 +25,7 @@ fi
 
 case "${1}" in
     setup)
-        echo "⚙️  Running PhishGuard setup…"
+        echo "⚙️  Running Sharingan setup…"
 
         # Create venv if it doesn't exist
         if [ ! -d "venv" ]; then
@@ -35,15 +34,12 @@ case "${1}" in
             source venv/bin/activate
         fi
 
-        $PYTHON phishguard.py setup
+        $PYTHON sharingan.py setup
         ;;
     check)
-        $PYTHON phishguard.py check
+        $PYTHON sharingan.py check
         ;;
     *)
-        echo ""
-        echo "  🛡️  PhishGuard v2.0 — Starting Server"
-        echo ""
-        $PYTHON phishguard.py start "$@"
+        $PYTHON sharingan.py "$@"
         ;;
 esac
