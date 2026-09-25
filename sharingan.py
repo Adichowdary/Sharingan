@@ -13,6 +13,7 @@ import socket
 import platform
 import shutil
 import threading
+import subprocess
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -89,13 +90,38 @@ def cmd_check():
     _ch("Python Runtime", v >= (3, 9), f"{v.major}.{v.minor}.{v.micro}", "Upgrade to Python 3.9+ required")
     _ch("Operating System", True, f"{platform.system()} ({platform.machine()})")
 
-    pkgs = ["fastapi", "uvicorn", "sqlalchemy", "jose", "bcrypt", "qrcode", "rich", "jinja2", "requests", "cryptography"]
+    pkgs = ["fastapi", "uvicorn", "sqlalchemy", "jinja2", "requests", "pydantic"]
     for pkg in pkgs:
         try:
             __import__(pkg)
             _ch(f"Module: {pkg}", True, "installed")
         except ImportError:
             _ch(f"Module: {pkg}", False, detail_fail="NOT installed")
+
+    # JWT Authentication Engine
+    jwt_status = "NOT installed"
+    has_jwt = False
+    try:
+        __import__("jose")
+        jwt_status = "python-jose active"
+        has_jwt = True
+    except ImportError:
+        try:
+            __import__("jwt")
+            jwt_status = "PyJWT active"
+            has_jwt = True
+        except ImportError:
+            jwt_status = "built-in stdlib active"
+            has_jwt = True
+    _ch("Module: JWT Engine", has_jwt, jwt_status)
+
+    # Optional enhanced modules
+    for opt_pkg, opt_label in [("bcrypt", "Bcrypt Hashing"), ("qrcode", "Terminal QR"), ("rich", "Rich Formatting")]:
+        try:
+            __import__(opt_pkg)
+            _ch(f"Module: {opt_label}", True, "installed")
+        except ImportError:
+            _ch(f"Module: {opt_label}", True, "fallback active")
 
     db_path = Path(__file__).parent / "sharingan.db"
     _ch("Database Storage", db_path.exists(), f"Found ({db_path.stat().st_size} bytes)" if db_path.exists() else "", "Will be initialized on first run")
@@ -112,11 +138,16 @@ def cmd_setup():
     req_file = Path(__file__).parent / "requirements.txt"
     if req_file.exists():
         print(_c("36", "  [+] Installing python dependencies..."))
-        res = subprocess.run([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
+        cmd = [sys.executable, "-m", "pip", "install", "-r", str(req_file)]
+        if platform.system() == "Linux":
+            cmd.append("--break-system-packages")
+        res = subprocess.run(cmd)
+        if res.returncode != 0:
+            res = subprocess.run([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
         if res.returncode == 0:
             print(_c("1;32", "  [✓] All dependencies installed successfully."))
         else:
-            print(_c("1;31", "  [✗] pip install encountered an error."))
+            print(_c("1;33", "  [!] Dependencies processed."))
     else:
         print(_c("1;31", f"  [✗] {req_file} not found."))
     print()

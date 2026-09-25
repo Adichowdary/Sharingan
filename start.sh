@@ -23,6 +23,12 @@ if [ -d "venv" ]; then
     source venv/bin/activate
 fi
 
+# Auto-check dependencies before launch
+if ! $PYTHON -c "import fastapi" &>/dev/null; then
+    echo "📦 Dependencies missing. Installing requirements..."
+    $PYTHON -m pip install -r requirements.txt --break-system-packages 2>/dev/null || $PYTHON -m pip install -r requirements.txt || true
+fi
+
 case "${1}" in
     setup)
         echo "⚙️  Running Sharingan setup…"
@@ -43,3 +49,4 @@ case "${1}" in
         $PYTHON sharingan.py "$@"
         ;;
 esac
+

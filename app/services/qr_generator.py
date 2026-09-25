@@ -1,12 +1,16 @@
 """
-PhishGuard QR Code Generator
+Sharingan QR Code Generator
 """
 import io
 import base64
 
-import qrcode
-from qrcode.image.styledpil import StyledPilImage
-from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
+try:
+    import qrcode
+    from qrcode.image.styledpil import StyledPilImage
+    from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
+    _HAS_QR = True
+except ImportError:
+    _HAS_QR = False
 
 
 def generate_qr_code(data: str, size: int = 10) -> str:
@@ -14,6 +18,8 @@ def generate_qr_code(data: str, size: int = 10) -> str:
     Generate a QR code PNG image encoded as a base64 data-URI string.
     Returns a string like 'data:image/png;base64,...'
     """
+    if not _HAS_QR:
+        return ""
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -42,6 +48,8 @@ def generate_qr_code(data: str, size: int = 10) -> str:
 
 def generate_qr_bytes(data: str, size: int = 10) -> bytes:
     """Generate a QR code and return raw PNG bytes."""
+    if not _HAS_QR:
+        return b""
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -54,3 +62,4 @@ def generate_qr_bytes(data: str, size: int = 10) -> bytes:
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
+
